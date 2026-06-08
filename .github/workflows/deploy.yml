@@ -1,0 +1,120 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+jobs:
+  deploy-web:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.x'
+        cache: 'pnpm'
+    
+    - name: Install pnpm
+      run: npm install -g pnpm
+    
+    - name: Install dependencies
+      run: pnpm install
+    
+    - name: Build web
+      run: pnpm build:web
+    
+    - name: Deploy to Vercel
+      uses: vercel/action@master
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+      env:
+        VERCEL_ENV: production
+
+  deploy-server:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.x'
+        cache: 'pnpm'
+    
+    - name: Install pnpm
+      run: npm install -g pnpm
+    
+    - name: Install dependencies
+      run: pnpm install
+    
+    - name: Build server
+      run: pnpm build
+    
+    - name: Deploy to Cloud Run
+      uses: google-github-actions/deploy-cloudrun@v0
+      with:
+        service: timao-dados-server
+        image: gcr.io/${{ secrets.GCP_PROJECT }}/timao-dados:${{ github.sha }}
+        region: us-central1
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+      env:
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
+        API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+
+  notify-sentry:
+    runs-on: ubuntu-latest
+    needs: [deploy-web, deploy-server]
+    
+    steps:
+    - name: Notify Sentry of release
+      uses: getsentry/action-release@v1
+      env:
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      with:
+        environment: production
+        version: ${{ github.sha }}
+
+  notify-slack:
+    runs-on: ubuntu-latest
+    needs: [deploy-web, deploy-server]
+    if: always()
+    
+    steps:
+    - name: Notify Slack
+      uses: slackapi/slack-github-action@v1
+      with:
+        payload: |
+          {
+            "text": "🚀 Timão Dados Deployment",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Deployment Status*\nWeb: ${{ needs.deploy-web.result }}\nServer: ${{ needs.deploy-server.result }}"
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "Commit: <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\nAuthor: ${{ github.actor }}"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

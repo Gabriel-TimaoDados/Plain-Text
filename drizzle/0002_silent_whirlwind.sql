@@ -1,0 +1,61 @@
+CREATE TABLE `gameStats` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`gameId` int NOT NULL,
+	`isHome` int NOT NULL,
+	`possession` int,
+	`shots` int,
+	`shotsOnTarget` int,
+	`passes` int,
+	`passAccuracy` int,
+	`fouls` int,
+	`yellowCards` int,
+	`redCards` int,
+	`corners` int,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `gameStats_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `rivalries` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`opponent` varchar(255) NOT NULL,
+	`totalGames` int DEFAULT 0,
+	`corinthiansWins` int DEFAULT 0,
+	`corinthiansDraws` int DEFAULT 0,
+	`corinthiansLosses` int DEFAULT 0,
+	`corinthiansGoals` int DEFAULT 0,
+	`opponentGoals` int DEFAULT 0,
+	`homeGames` int DEFAULT 0,
+	`homeWins` int DEFAULT 0,
+	`homeDraws` int DEFAULT 0,
+	`homeLosses` int DEFAULT 0,
+	`homeCorinthiansGoals` int DEFAULT 0,
+	`homeOpponentGoals` int DEFAULT 0,
+	`awayGames` int DEFAULT 0,
+	`awayWins` int DEFAULT 0,
+	`awayDraws` int DEFAULT 0,
+	`awayLosses` int DEFAULT 0,
+	`awayCorinthiansGoals` int DEFAULT 0,
+	`awayOpponentGoals` int DEFAULT 0,
+	`lastMeeting` varchar(50),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `rivalries_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `upcomingGames` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`gameDate` varchar(50) NOT NULL,
+	`gameTime` varchar(50),
+	`location` varchar(255),
+	`stadium` varchar(255),
+	`competition` varchar(100),
+	`opponent` varchar(255) NOT NULL,
+	`homeTeam` varchar(255),
+	`awayTeam` varchar(255),
+	`status` enum('scheduled','postponed','cancelled') DEFAULT 'scheduled',
+	`description` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `upcomingGames_id` PRIMARY KEY(`id`)
+);
